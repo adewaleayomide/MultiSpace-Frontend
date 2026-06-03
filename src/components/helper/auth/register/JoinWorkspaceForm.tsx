@@ -4,38 +4,70 @@ import { Input } from "@/components/ui/input";
 import { Field, FieldLabel } from "../../../ui/field";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { joinWorkspaceSchema, JoinWorkspaceInput } from "@/lib/validators/joinWorkspace.ts";
+import { joinWorkspaceSchema, JoinWorkspaceInput } from "@/lib/validators/auth/register/joinWorkspace";
 import { Button } from "../../../ui/button";
 
+import { RegisterInput } from "@/lib/validators/auth/register/register";
+import { toast } from "sonner";
+import { joinWorkspace } from "@/services/auth.service";
+import { useState } from "react";
 
-export default function JoinWorkspaceForm({ next, back, onComplete }: {
-  next: () => void,
-  back: () => void,
-  onComplete: (data: JoinWorkspaceInput) => void }) {
+
+export default function JoinWorkspaceForm({
+  back,
+  onNext,
+}: {
+  back: () => void;
+  onNext: () => void;
+}) {
+  const [ workspaceData, setWorkspaceData] = useState<JoinWorkspaceInput | null>(null);
   const {
     register,
+    getValues,
     handleSubmit,
     formState: { errors },
   } = useForm<JoinWorkspaceInput>({
     resolver: zodResolver(joinWorkspaceSchema),
   });
 
-  // Handle form submission
-  const onSubmit = (data: JoinWorkspaceInput) => {
-    onComplete(data);
+  const handleFinalSubmit = async (data: JoinWorkspaceInput) => {
+      const values = getValues();
+  
+      const payload = {
+        slug: values.slug,
+        inviteCode: values.inviteCode,
+      };
+    try {
+
+      const data = await joinWorkspace(payload);
+  
+      console.log(payload);
+  
+      toast.success( data.message || "Account and Workspace created successfully!");
+  
+      setWorkspaceData(payload);
+
+    } catch (error) {
+        toast.error (
+          error instanceof Error
+          ? error.message
+          : "Failed to join workspace. Please check your inputs and try again."
+        )
+      }
   };
+  
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+    <form onSubmit={handleSubmit(handleFinalSubmit)} className="space-y-4">
       {/* WORKSPACE NAME */}
       <Field>
         <FieldLabel>Workspace Slug</FieldLabel>
         <Input
-          {...register("workspaceSlug")}
+          {...register("slug")}
           placeholder="Workspace slug"
           className="placeholder:text-xs text-md"
         />
-        <p className="text-xs text-red-500 mt-1">{errors.workspaceSlug?.message}</p>
+        <p className="text-xs text-red-500 mt-1">{errors.slug?.message}</p>
       </Field>
 
       {/* INVITE CODE */}
@@ -60,7 +92,6 @@ export default function JoinWorkspaceForm({ next, back, onComplete }: {
         </Button>
         <Button
           type="submit"
-          onClick={next}
         >
           Join Workspace
         </Button>

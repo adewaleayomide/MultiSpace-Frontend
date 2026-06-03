@@ -13,22 +13,28 @@ import {
 } from "@/components/ui/card";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, LockKeyhole, Mail, User } from "lucide-react";
 import { Spinner } from "../../../ui/spinner";
+import Link from "next/link";
 
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { registerSchema, RegisterInput } from "@/lib/validators/register.ts";
+import { registerSchema, RegisterInput } from "@/lib/validators/auth/register/register";
 import CreateWorkspaceForm from "./CreateWorkspaceForm";
 import JoinWorkspaceForm from "./JoinWorkspaceForm";
-import { JoinWorkspaceInput } from "@/lib/validators/joinWorkspace";
-import { CreateWorkspaceInput } from "@/lib/validators/createWorkspace";
+import Image from "next/image";
+import { toast } from "sonner";
+import { registerUser } from "@/services/auth.service";
+import { useRouter } from "next/navigation";
 
 const steps = ["Account", "Workspace Choice", "Workspace Details"];
 
 
 
 export default function RegisterForm() {
+
+  const router = useRouter();
+
   const [step, setStep] = useState(0);
   const [show, setShow] = useState(false);
 
@@ -39,7 +45,6 @@ export default function RegisterForm() {
 
   const {
     register,
-    handleSubmit,
     trigger,
     getValues,
     formState: { errors },
@@ -47,30 +52,15 @@ export default function RegisterForm() {
     resolver: zodResolver(registerSchema),
   });
 
-  const onSubmit = (data: RegisterInput) => {
-    console.log("VALID DATA:", data);
-    // send to API later
-  };
 
   const [accountData, setAccountData] = useState<{
-    name: string;
+    displayName: string;
+    username: string;
     email: string;
     password: string;
   } | null>(null);
-  const [workspaceData, setWorkspaceData] = useState<CreateWorkspaceInput | null>(null);
-  const [joinData, setJoinData] = useState<JoinWorkspaceInput | null>(null);
+  
 
-  const handleFinalSubmit = async () => {
-    const payload = {
-      account: accountData,
-      workspace:
-        workspaceMode === "create" ? workspaceData : joinData,
-    };
-
-    console.log(payload);
-  };
-
-  // const { getValues } = useForm();
 
   return (
     
@@ -78,11 +68,11 @@ export default function RegisterForm() {
         <div className="flex items-center justify-between relative w-full max-w-md mb-8">
             
             {/* Background line */}
-            <div className="absolute top-4 left-0 w-full h-1 bg-gray-200" />
+            <div className="absolute top-4 left-0 w-full h-1 bg-transparent" />
 
             {/* Active line */}
             <div
-            className="absolute top-4 left-0 h-1 bg-black transition-all duration-300"
+            className="absolute top-4 left-0 h-1 bg-gray-200 transition-all duration-300"
             style={{
                 width: `${(step / (steps.length - 1)) * 100}%`,
             }}
@@ -100,7 +90,7 @@ export default function RegisterForm() {
                     className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-all
                     ${
                         isActive
-                        ? "bg-black text-white border-2 border-white cursor-pointer"
+                        ? "bg-card text-white border-2 border-white cursor-pointer"
                         : "bg-gray-200 text-gray-500"
                     }
                     ${isCurrent ? "scale-110" : ""}
@@ -120,12 +110,15 @@ export default function RegisterForm() {
             );
             })}
         </div>
-        <form onSubmit={handleSubmit(onSubmit)} className="w-full flex items-center justify-center">
+        <div className="w-full flex items-center justify-center">
 
-          <Card className="w-4/5 max-w-md lg:w-1/2">
+          <Card className="w-4/5 max-w-md lg:w-1/2 bg-linear-155 from-card to-[#6F78C7] from-80%">
             <CardHeader>
-              <CardTitle className="text-2xl"><h2>MultiSpace</h2></CardTitle>
-              <CardDescription>
+                <CardTitle className="font-bold [font-variant:small-caps] text-2xl">
+                    <Image src="/assets/favicon_io/favicon.ico" alt="logo" width={32} height={32} className="inline mr-2" />
+                    MultiSpace
+                </CardTitle>
+                <CardDescription className="">
                 {step === 0 && (
                   <span> Create an account now to get started!</span>
                 )}
@@ -138,11 +131,15 @@ export default function RegisterForm() {
                   <span> Set up your workspace and collaborate with your team</span>
                 )}
               </CardDescription>
+              {step === 0 && (
+              <CardAction className=" h-full flex items-center">
+                <Link href="/login" className="hover:underline ">Log In</Link>
+              </CardAction>
+              )}
               {step === 1 && (
                 <CardAction>
-                  <Button variant="outline" onClick={() => {
-                    setWorkspaceMode(null);
-                    next(); // Fix this to jump to the website
+                  <Button variant="outline" onClick={ () => {
+                    router.push("/dashboard")
                   }}>
                     Skip
                   </Button>
@@ -152,20 +149,39 @@ export default function RegisterForm() {
             <CardContent className="space-y-4">
               {step === 0 && (
                 <>
+                  <div className="flex gap-2">
+                    <Field>
+                      <FieldLabel htmlFor="displayName">Name</FieldLabel>
+                      <div className="relative">
+                        <Input {...register("displayName")}  id="displayName" placeholder="John Doe" className="placeholder:text-xs text-md pl-8" />
+                        <User className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                      </div>
+                      <p className="text-xs text-red-500 ">{errors.displayName?.message}</p>
+                    </Field>
+                    <Field>
+                      <FieldLabel htmlFor="username">Username</FieldLabel>
+                      <div className="relative">
+                        <Input {...register("username")}  id="username" placeholder="john_doe" className="placeholder:text-xs text-md pl-8" />
+                        <User className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                      </div>
+                      <p className="text-xs text-red-500 ">{errors.username?.message}</p>
+                    </Field>
+                  </div>
                   <Field>
-                    <FieldLabel>Name</FieldLabel>
-                    <Input {...register("name")}  placeholder="John Doe" className="placeholder:text-xs text-md" />
-                    <p className="text-xs text-red-500 mt-1">{errors.name?.message}</p>
+                    <FieldLabel htmlFor="email">Email</FieldLabel>
+                    <div className="relative">
+                      <Input {...register("email")} id="email" type="email" placeholder="johndoe21@example.com" className="placeholder:text-xs text-md pl-8" />
+                      <Mail className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+
+                    </div>
+                    <p className="text-xs text-red-500 ">{errors.email?.message}</p>
                   </Field>
                   <Field>
-                    <FieldLabel>Email</FieldLabel>
-                    <Input {...register("email")} type="email" placeholder="johndoe21@example.com" className="placeholder:text-xs text-md" />
-                    <p className="text-xs text-red-500 mt-1">{errors.email?.message}</p>
-                  </Field>
-                  <Field>
-                    <FieldLabel>Password</FieldLabel>
+                    <FieldLabel htmlFor="password">Password</FieldLabel>
                     <span className="relative w-full">
-                      <Input {...register("password")} type={show ? "text" : "password"} placeholder="********" className="placeholder:text-xs pr-16 text-md" />
+                      <LockKeyhole className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                      <Input {...register("password")} id="password" type={show ? "text" : "password"} placeholder="********" className="placeholder:text-xs pl-8 pr-16 text-md
+                      " />
                       <button
                           type="button"
                           onClick={() => setShow((s) => !s)}
@@ -174,7 +190,7 @@ export default function RegisterForm() {
                           {show ? <EyeOff className="p-1" /> : <Eye className=" p-1" />}
                       </button>
                     </span>
-                    <p className="text-xs text-red-500 mt-1">{errors.password?.message}</p>
+                    <p className="text-xs text-red-500 ">{errors.password?.message}</p>
                   </Field>
                 </>
               )}
@@ -202,14 +218,8 @@ export default function RegisterForm() {
               )}
               {step === 2 && (
                 <> 
-                    {workspaceMode === "create" && <CreateWorkspaceForm next={next} back={back} onComplete={(data) => {
-                      setWorkspaceData(data);
-                      next(); // Later redirect this to the main website
-                    }}/>}
-                    {workspaceMode === "join" && <JoinWorkspaceForm next={next} back={back} onComplete={(data) => {
-                      setJoinData(data),
-                      next(); // Later redirect to the main website 
-                    }}/>}
+                    {workspaceMode === "create" && <CreateWorkspaceForm back={back} onNext={next} />}
+                    {workspaceMode === "join" && <JoinWorkspaceForm back={back} onNext={next} />}
                 </>
               )}
             </CardContent>
@@ -220,15 +230,38 @@ export default function RegisterForm() {
                       <Button className="w-full  p-4 cursor-pointer"
                           type="button"
                           onClick={async() => {
-                            const valid = await trigger (["name", "email", "password"]);
-                            if (valid) {
-                              const values = getValues();
-                              setAccountData({
-                                name: values.name,
-                                email: values.email,
-                                password: values.password,
-                              });
+                            const valid = await trigger([
+                              "username",
+                              "displayName",
+                              "email",
+                              "password",
+                            ]);
+
+                            if (!valid) return;
+
+                            const values = getValues();
+
+                            const payload = {
+                              displayName: values.displayName,
+                              username: values.username,
+                              email: values.email,
+                              password: values.password,
+                            };
+
+                            try {
+                              const data = await registerUser(payload);
+
+                              toast.success(data.message);
+
+                              setAccountData(payload);
+
                               next();
+                            } catch (error: any) {
+                              toast.error(
+                                error instanceof Error
+                                  ? error.message
+                                  : "Account creation failed"
+                              );
                             }
                           }}
                           >
@@ -240,7 +273,7 @@ export default function RegisterForm() {
             </CardFooter>
             )}
           </Card>
-        </form>
+        </div>
     </div>
   );
 }

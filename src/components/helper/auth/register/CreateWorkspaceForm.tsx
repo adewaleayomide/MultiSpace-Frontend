@@ -7,9 +7,13 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import {
   createWorkspaceSchema,
   CreateWorkspaceInput,
-} from "@/lib/validators/createWorkspace";
+} from "@/lib/validators/auth/register/createWorkspace";
+import { RegisterInput } from "@/lib/validators/auth/register/register";
+
 import { useEffect, useState } from "react";
 import { Button } from "../../../ui/button";
+import { toast } from "sonner";
+import { createWorkspace } from "@/services/auth.service";
 
 export function generateSlug(name: string) {
   return name
@@ -20,20 +24,54 @@ export function generateSlug(name: string) {
     .replace(/-+/g, "-");
 }
 
-export default function CreateWorkspaceForm({ next, back, onComplete }: {
-  next: () => void;
+export default function CreateWorkspaceForm({
+  back,
+  onNext,
+}: {
   back: () => void;
-  onComplete: (data: CreateWorkspaceInput) => void;
+  onNext: () => void;
 }) {
+
+  const [ workspaceData, setWorkspaceData] = useState<CreateWorkspaceInput | null>(null);
+
   const {
     register,
     setValue,
+    getValues,
     watch,
     handleSubmit,
     formState: { errors, touchedFields },
   } = useForm<CreateWorkspaceInput>({
     resolver: zodResolver(createWorkspaceSchema),
   });
+
+
+  const handleFinalSubmit = async (data: CreateWorkspaceInput) => {
+    const values = getValues();
+
+    const payload = {
+      workspaceName: values.workspaceName,
+      slug: values.slug,
+      description: values.description
+    };
+    try {
+    const data = await createWorkspace(payload);
+
+    console.log(payload);
+
+    toast.success( data.message || "Account and Workspace created successfully!");
+
+    setWorkspaceData(payload);
+
+    }  catch (error) {
+      toast.error (
+        error instanceof Error
+        ? error.message
+        : "Creation failed. Please check your credentials and try again."
+      )
+    }
+  };
+
 
   const workspaceName = watch("workspaceName");
   const slug = watch("slug");
@@ -47,13 +85,9 @@ export default function CreateWorkspaceForm({ next, back, onComplete }: {
     }
   }, [workspaceName, isSlugEdited, setValue]);
 
-  // Handle form submission
-  const onSubmit = (data: CreateWorkspaceInput) => {
-    onComplete(data);
-  };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+    <form onSubmit={handleSubmit(handleFinalSubmit)}  className="space-y-4">
       {/* WORKSPACE NAME */}
       <Field>
         <FieldLabel>Workspace Name</FieldLabel>
@@ -98,6 +132,7 @@ export default function CreateWorkspaceForm({ next, back, onComplete }: {
         <p className="text-xs text-red-500 mt-1">
           {errors.description?.message}
         </p>
+        
       </Field>
 
       {/* BUTTON */}
@@ -111,7 +146,6 @@ export default function CreateWorkspaceForm({ next, back, onComplete }: {
         </Button>
         <Button
           type="submit"
-          onClick={next}
         >
           Create Workspace
         </Button>
