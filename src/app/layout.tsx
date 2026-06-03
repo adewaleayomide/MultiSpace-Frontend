@@ -7,6 +7,7 @@ import { Space_Grotesk } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 import { ThemeProvider } from "@/components/theme-provider"
+import { Toaster } from "@/components/ui/sonner";
 
 // const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
@@ -26,8 +27,36 @@ const spaceGrotesk = Space_Grotesk({
 });
 
 export const metadata: Metadata = {
-  title: "MultiSpace",
+  title: {
+    default: "MultiSpace",
+    template: "%s | MultiSpace",
+  },
   description: "Modern collaboration platform",
+  icons: {
+    icon: "/assets/favicon_io/favicon.ico",
+    shortcut: "/assets/favicon_io/favicon-16x16.png",
+    apple: "/assets/favicon_io/apple-touch-icon.png",
+  },
+  openGraph: {
+    title: "MultiSpace",
+    description: "Modern collaboration platform",
+    url: "https://yourdomain.com",
+    siteName: "MultiSpace",
+    images: [
+      {
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
+      },
+    ],
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "MultiSpace",
+    description: "Team collaboration made simple",
+    images: ["/og-image.png"],
+  }
 };
 
 export default function RootLayout({
@@ -50,6 +79,7 @@ export default function RootLayout({
           >
             {children}
           </ThemeProvider>
+          <Toaster />
       </body>
     </html>
   );
